@@ -109,7 +109,10 @@ Metro/adb exactly as they would outside a container) instead of directly on the 
 docker run -d --name scry-rn-emu --device=/dev/kvm --network=host \
   -v ~/android-sdk:/opt/android-sdk -v ~/.android:/root/.android ubuntu:22.04 sleep infinity
 docker exec scry-rn-emu bash -c '
-  export ANDROID_HOME=/opt/android-sdk PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH" HOME=/root
+  apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libx11-6 libx11-xcb1 libpulse0 \
+    libgl1 libnss3 libxcomposite1 libxcursor1 libxi6 libxtst6 libasound2 libxdamage1 libxkbfile1 libdbus-1-3 \
+    libxrandr2 libxfixes3 libxkbcommon0 libxcb1 libdrm2 libgbm1 >/dev/null   # emulator runtime libs
+  export ANDROID_HOME=/opt/android-sdk; export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH" HOME=/root
   emulator -avd Pixel_6_API_34 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -accel on
 ' &
 export ANDROID_HOME=~/android-sdk PATH="$ANDROID_HOME/platform-tools:$PATH"
@@ -140,6 +143,30 @@ on its own; `adb shell am start` alone just refocuses the already-failed instanc
 iOS is the Mac mini's job (PR 6's device farm, see the `onlook-fork`/`ui-automator-spectra`
 memory) — this repo stays iOS-buildable (`npm run ios`; no Android-only native deps) but is not
 verified on a simulator here.
+
+## Capturing with `scry capture rn`
+
+The Scry CLI (`@scrymore/scry-deployer` 0.10+) drives this app end to end:
+
+```sh
+npx @scrymore/scry-deployer capture rn --platform android --device Pixel_6_API_34     # installed debug build
+npx @scrymore/scry-deployer capture rn --platform ios --device "iPhone 16" \
+  --app-id host.exp.Exponent --open-url exp://127.0.0.1:8081                       # Expo Go on a simulator
+npx @scrymore/scry-deployer upload .scry/capture --project <id>
+```
+
+It starts Metro with `STORYBOOK_ENABLED=true EXPO_PUBLIC_SCRY_CAPTURE=1`. Capture mode
+(`src/capture.ts`) then:
+
+- hides the on-device Storybook chrome (`onDeviceUI: false`) and the safe-area padding
+  (`noSafeArea`), so a 390×844 screen story starts at the top of the display;
+- mounts `.rnstorybook/scryProbe.tsx`, a dev-only decorator that adds no view. Over the
+  Storybook channel it answers `scry:requestTree` with the `scry-root` bounds (the crop on iOS)
+  and an `rn-fiber` structure tree (scf-tree/1: component names, testIDs, roles, text, bounds
+  in points relative to the root, the React Native style keys the format lists).
+
+Neither runs in a normal build. Native iOS dev builds of this Expo SDK 57 app need Xcode 26;
+Expo Go works with older Xcode.
 
 ## License
 

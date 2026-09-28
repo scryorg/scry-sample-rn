@@ -12,6 +12,7 @@ import {
 } from '@expo-google-fonts/inter';
 
 import { view } from './storybook.requires';
+import { CAPTURE_MODE } from '../src/capture';
 
 const StorybookUIRoot = view.getStorybookUI({
   shouldPersistSelection: true,
@@ -20,6 +21,9 @@ const StorybookUIRoot = view.getStorybookUI({
     setItem: AsyncStorage.setItem,
   },
   enableWebsockets: true,
+  // Capture builds hide the on-device Storybook chrome (sidebar bar, fullscreen button) so
+  // the story fills the screen and nothing overlaps the `scry-root` crop.
+  onDeviceUI: !CAPTURE_MODE,
 });
 
 // Inter is bundled (no system font fallback, per the capture-sources brief): hold the
