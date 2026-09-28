@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main, stage]
+  pull_request:
+
+jobs:
+  check:
+    # This repo goes public with the rest of capture-sources: pull_request must never land on
+    # the org's self-hosted runner pool for a fork PR (capture-sources/briefs/contract.md).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check:types
+      - run: npm test
