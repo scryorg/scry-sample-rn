@@ -1,5 +1,7 @@
 // Learn more https://docs.expo.io/guides/customizing-metro
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- Metro loads this config as CommonJS at build time; it cannot be an ESM import.
 const { getDefaultConfig } = require('expo/metro-config');
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- Metro loads this config as CommonJS at build time; it cannot be an ESM import.
 const { withStorybook } = require('@storybook/react-native/withStorybook');
 
 const config = getDefaultConfig(__dirname);

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { Button } from '../components/Button';
 import { MenuItem } from '../components/MenuItem';
 import { menuItems as allMenuItems, type MenuItemData } from '../data';
