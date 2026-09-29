@@ -34,6 +34,7 @@ const DEFAULT_STORIES = [
 const storyIds = requested.length ? requested : DEFAULT_STORIES;
 
 function adb(...args) {
+  // eslint-disable-next-line sonarjs/no-os-command-from-path -- local dev-only script; intentionally uses the developer's own `adb` on PATH, same as Expo/Android tooling.
   const result = spawnSync('adb', args, { encoding: 'buffer' });
   if (result.status !== 0) {
     throw new Error(`adb ${args.join(' ')} failed: ${result.stderr?.toString() ?? result.status}`);

@@ -90,6 +90,13 @@ function hex2(n: number): string {
   return Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0').toUpperCase();
 }
 
+/** Splits a matched `rgb(...)`/`rgba(...)` body into 3-4 numeric parts, or undefined if invalid. */
+function parseRgbaParts(body: string): string[] | undefined {
+  const parts = body.split(',').map((p) => p.trim());
+  const isValid = (parts.length === 3 || parts.length === 4) && parts.every((p) => /^[\d.]+$/.test(p));
+  return isValid ? parts : undefined;
+}
+
 /** '#RRGGBB' / '#RRGGBBAA', or undefined for anything it cannot read. */
 function toHex(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -102,12 +109,12 @@ function toHex(value: unknown): string | undefined {
     if (h.length === 6 || h.length === 8) return `#${h}`.toUpperCase();
     return undefined;
   }
-  m = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/.exec(v);
-  if (m) {
-    const a = m[4] === undefined ? '' : hex2(Number(m[4]) * 255);
-    return `#${hex2(Number(m[1]))}${hex2(Number(m[2]))}${hex2(Number(m[3]))}${a === 'FF' ? '' : a}`;
-  }
-  return undefined;
+  m = /^rgba?\(([^)]*)\)$/.exec(v);
+  const parts = m ? parseRgbaParts(m[1]) : undefined;
+  if (!parts) return undefined;
+  const [r, g, b, aStr] = parts;
+  const a = aStr === undefined ? '' : hex2(Number(aStr) * 255);
+  return `#${hex2(Number(r))}${hex2(Number(g))}${hex2(Number(b))}${a === 'FF' ? '' : a}`;
 }
 
 function num(v: unknown): number | undefined {
@@ -286,6 +293,7 @@ function listen() {
 /** Wraps each story without adding a view (no layout change); remembers the mounted story. */
 export class ScryProbe extends Component<{ children: ReactNode }> {
   componentDidMount() {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- `current` tracks the mounted instance for module-scope code (the `listen()` channel handler above), not a scoping workaround.
     current = this;
     listen();
   }

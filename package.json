@@ -12,7 +12,8 @@
     "storybook:ios": "STORYBOOK_ENABLED=true expo run:ios",
     "storybook-generate": "sb-rn-get-stories --host auto",
     "check:types": "tsc --noEmit",
-    "test": "node --test scripts/*.test.mjs"
+    "test": "node --test scripts/*.test.mjs",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -30,7 +31,10 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.39.5",
+    "eslint-plugin-sonarjs": "^4.2.2",
     "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0",
     "ws": "^8.21.1"
   }
 }
