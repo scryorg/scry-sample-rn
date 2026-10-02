@@ -1,0 +1,58 @@
+name: scry-capture
+
+# Capture the Storybook stories on an Android emulator and upload them to Scry.
+# Runs ONLY on a push to the default branch (or a manual run from it), never on a pull
+# request, so a fork PR can never reach SCRY_API_KEY. Hosted runner only (guarantee G5).
+# One-time setup in your repo: a repository variable SCRY_PROJECT_ID and a secret SCRY_API_KEY.
+# Until the variable exists the job is skipped, so a fork or a fresh copy stays green.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    if: github.ref_name == github.event.repository.default_branch && vars.SCRY_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+      - name: Build the debug app
+        run: |
+          npx expo prebuild --platform android
+          (cd android && ./gradlew assembleDebug)
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Capture on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          avd-name: Pixel_6_API_34
+          script: bash scripts/ci-capture-android.sh
+      - name: Check the bundle
+        run: npx @scrymore/scry-deployer upload .scry/capture --dry-run
+        env:
+          SCRY_PROJECT_ID: ${{ vars.SCRY_PROJECT_ID }}
+          SCRY_API_KEY: ${{ secrets.SCRY_API_KEY }}
+      - name: Upload to Scry
+        run: npx @scrymore/scry-deployer upload .scry/capture
+        env:
+          SCRY_PROJECT_ID: ${{ vars.SCRY_PROJECT_ID }}
+          SCRY_API_KEY: ${{ secrets.SCRY_API_KEY }}
