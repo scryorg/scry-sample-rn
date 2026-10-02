@@ -5,6 +5,8 @@ name: scry-capture
 # request, so a fork PR can never reach SCRY_API_KEY. Hosted runner only (guarantee G5).
 # One-time setup in your repo: a repository variable SCRY_PROJECT_ID and a secret SCRY_API_KEY.
 # Until the variable exists the job is skipped, so a fork or a fresh copy stays green.
+# Two jobs on purpose: `capture` runs this repo's code (npm ci, gradle) with NO secret;
+# only `upload` holds SCRY_API_KEY, and it runs just the pinned CLI on the downloaded bundle.
 on:
   push:
     branches: [main]
@@ -20,6 +22,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -39,20 +43,39 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Capture on an emulator
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 34
           arch: x86_64
           profile: pixel_6
           avd-name: Pixel_6_API_34
           script: bash scripts/ci-capture-android.sh
-      - name: Check the bundle
-        run: npx @scrymore/scry-deployer upload .scry/capture --dry-run
-        env:
-          SCRY_PROJECT_ID: ${{ vars.SCRY_PROJECT_ID }}
-          SCRY_API_KEY: ${{ secrets.SCRY_API_KEY }}
+      - name: Check the bundle (no key needed)
+        run: npx @scrymore/scry-deployer@0.11.1 upload .scry/capture --dry-run
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scry-bundle
+          path: .scry/capture
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  # The only job with the key. It installs nothing from this repo and does not check it out.
+  upload:
+    needs: capture
+    if: github.ref_name == github.event.repository.default_branch && vars.SCRY_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: scry-bundle
+          path: bundle
       - name: Upload to Scry
-        run: npx @scrymore/scry-deployer upload .scry/capture
+        run: npx @scrymore/scry-deployer@0.11.1 upload bundle
         env:
           SCRY_PROJECT_ID: ${{ vars.SCRY_PROJECT_ID }}
           SCRY_API_KEY: ${{ secrets.SCRY_API_KEY }}

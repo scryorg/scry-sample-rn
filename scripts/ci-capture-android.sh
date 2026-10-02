@@ -5,4 +5,4 @@ set -euo pipefail
 adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 adb reverse tcp:8081 tcp:8081
 adb reverse tcp:7007 tcp:7007
-npx @scrymore/scry-deployer capture rn --platform android --app-id com.scrymore.samplern
+npx @scrymore/scry-deployer@0.11.1 capture rn --platform android --app-id com.scrymore.samplern
